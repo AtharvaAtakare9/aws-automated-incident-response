@@ -1,53 +1,54 @@
-This is a complete rewrite of your README with improved formatting, consistent headings, polished technical writing, and corrected screenshot references.
-
-````md
 # Automated Incident Response System using CloudWatch Alarms & Lambda Remediation
 
 ## Project Overview
 
-This project demonstrates an event-driven automated incident response system built on AWS. Amazon CloudWatch continuously monitors the CPU utilization of an Amazon EC2 instance. When CPU usage exceeds the configured threshold for a sustained period, a CloudWatch Alarm publishes a notification to Amazon SNS, which invokes an AWS Lambda function to automatically remediate the issue by rebooting the affected EC2 instance.
+This project demonstrates an automated incident response solution on AWS using Amazon CloudWatch, Amazon SNS, AWS Lambda, and CloudWatch Logs. The solution continuously monitors the CPU utilization of an Amazon EC2 instance and automatically remediates high CPU incidents without manual intervention.
 
-Every remediation event is recorded in Amazon CloudWatch Logs, providing a complete audit trail for monitoring, troubleshooting, and operational governance.
+When CPU utilization exceeds the configured threshold for a sustained period, a CloudWatch Alarm changes to the **ALARM** state and publishes a notification to an Amazon SNS topic. The SNS topic invokes an AWS Lambda function that automatically reboots the affected EC2 instance and records the remediation action in CloudWatch Logs for auditing and troubleshooting.
+
+This event-driven architecture minimizes downtime, improves operational reliability, and provides a complete audit trail for every automated remediation event.
 
 ---
 
-## Architecture
+# Architecture
 
 ```text
-                     +----------------------+
-                     |     Amazon EC2       |
-                     |   web-server-prod    |
-                     +----------+-----------+
-                                |
-                     CPU Utilization > 80%
-                                |
-                                ▼
-                     +----------------------+
-                     | CloudWatch Alarm     |
-                     |   HighCPUAlarm       |
-                     +----------+-----------+
-                                |
-                                ▼
-                     +----------------------+
-                     |   Amazon SNS Topic   |
-                     |  cpu-alarm-topic     |
-                     +----------+-----------+
-                                |
-                                ▼
-                     +----------------------+
-                     |     AWS Lambda       |
-                     | remediation_function |
-                     +----------+-----------+
-                                |
-                  +-------------+-------------+
-                  |                           |
-                  ▼                           ▼
-      Reboot EC2 Instance         CloudWatch Logs
+                    Automated Incident Response
+
+      +-----------------------+
+      |   Amazon EC2 Instance |
+      |    web-server-prod    |
+      +-----------+-----------+
+                  |
+          CPU Utilization > 80%
+                  |
+                  ▼
+      +-----------------------+
+      | CloudWatch Alarm      |
+      |   HighCPUAlarm        |
+      +-----------+-----------+
+                  |
+                  ▼
+      +-----------------------+
+      | Amazon SNS Topic      |
+      | cpu-alarm-topic       |
+      +-----------+-----------+
+                  |
+                  ▼
+      +-----------------------+
+      | AWS Lambda            |
+      | remediation_function  |
+      +-----------+-----------+
+                  |
+        +---------+---------+
+        |                   |
+        ▼                   ▼
+ Reboot EC2 Instance   CloudWatch Logs
 ```
 
 ---
 
-## Folder Structure
+# Folder Structure
 
 ```text
 project4/
@@ -72,16 +73,18 @@ project4/
 
 # Scenario
 
-A production EC2 instance experienced periodic CPU spikes that degraded application performance. Since remediation was manual, administrators had to investigate the issue, reboot the instance, and verify service recovery, increasing downtime and operational effort.
+Production workloads occasionally experienced sustained CPU spikes that degraded application performance. Previously, administrators had to manually detect the issue, investigate the instance, reboot the server, and verify service recovery.
 
-This project automates the entire incident response workflow by:
+This project automates the complete incident response lifecycle by:
 
-- Monitoring EC2 CPU utilization
-- Detecting sustained high CPU usage
+- Continuously monitoring EC2 CPU utilization
+- Detecting sustained threshold breaches
 - Publishing notifications using Amazon SNS
-- Automatically invoking an AWS Lambda function
+- Automatically invoking an AWS Lambda remediation function
 - Rebooting the affected EC2 instance
-- Recording every remediation event in CloudWatch Logs
+- Logging every remediation event to CloudWatch Logs
+
+This implementation demonstrates a practical self-healing infrastructure pattern using native AWS services.
 
 ---
 
@@ -92,8 +95,7 @@ This project automates the entire incident response workflow by:
 | AWS Account ID | **259151461533** |
 | AWS Account Alias | **atharv** |
 | AWS Region | **us-east-1** |
-| AWS Console User | **atharv** |
-| EC2 Instance Name | **web-server-prod** |
+| EC2 Instance | **web-server-prod** |
 | EC2 Instance ID | **i-0d8a7b4c9f1234567** |
 | CloudWatch Alarm | **HighCPUAlarm** |
 | SNS Topic | **cpu-alarm-topic** |
@@ -106,17 +108,19 @@ This project automates the entire incident response workflow by:
 
 # Step 1 — Configure CloudWatch Monitoring
 
-Create an SNS topic.
+Create an Amazon SNS topic.
 
 ```bash
 aws sns create-topic --name cpu-alarm-topic
 ```
 
-Create the CloudWatch CPU alarm.
+Run the alarm creation script.
 
 ```bash
 ./cloudwatch/create-cpu-alarm.sh
 ```
+
+The alarm monitors Amazon EC2 CPU utilization and publishes notifications whenever CPU usage remains above the configured threshold.
 
 ### Alarm Configuration
 
@@ -127,35 +131,36 @@ Create the CloudWatch CPU alarm.
 | Statistic | Average |
 | Threshold | Greater than 80% |
 | Evaluation Periods | 2 |
-| Datapoints to Alarm | 2 out of 2 |
+| Datapoints to Alarm | 2 of 2 |
 | Period | 5 Minutes |
 | Alarm Action | Publish to SNS Topic |
 
 ---
 
-## Screenshot 1 — CloudWatch Alarm Configuration
+## Screenshot 1 — CloudWatch Alarm Configured
 
-This screenshot shows the CloudWatch alarm configuration.
+This screenshot displays the CloudWatch Alarm configuration.
 
-- Alarm Name: HighCPUAlarm
-- Metric: CPUUtilization
-- Threshold: Greater than 80%
-- Evaluation: 2 out of 2 datapoints
-- Period: 5 minutes
-- SNS Topic: cpu-alarm-topic
-- Alarm State: OK
+It verifies:
 
-![CloudWatch Alarm](screenshots/01-cloudwatch-alarm-configured.png)
+- Alarm Name: **HighCPUAlarm**
+- Metric: **CPUUtilization**
+- Threshold: **80%**
+- Evaluation Periods: **2**
+- Alarm State: **OK**
+- SNS Action: **cpu-alarm-topic**
+
+![](./screenshots/01-cloudwatch-alarm-configured.png)
 
 ---
 
-# Step 2 — Configure Lambda Remediation
+# Step 2 — Configure AWS Lambda Remediation
 
-Create the IAM execution role.
+Create the Lambda execution role using the IAM policy included in this project.
 
-Deploy the Lambda function.
+Deploy the Lambda function using Python 3.12 runtime.
 
-Subscribe Lambda to the SNS topic.
+Subscribe the Lambda function to the SNS topic.
 
 ```bash
 aws sns subscribe \
@@ -174,123 +179,130 @@ aws lambda add-permission \
 --principal sns.amazonaws.com
 ```
 
-The Lambda function automatically:
+The Lambda function performs the following actions automatically:
 
 - Receives the SNS notification
-- Extracts the EC2 Instance ID
-- Reboots the EC2 instance
-- Writes execution details to CloudWatch Logs
+- Parses the CloudWatch alarm payload
+- Identifies the affected EC2 instance
+- Calls the EC2 RebootInstances API
+- Writes remediation details to CloudWatch Logs
 
 ---
 
-## Screenshot 2 — SNS Topic Subscription
+## Screenshot 2 — SNS to Lambda Subscription
 
-This screenshot shows the Amazon SNS topic with a confirmed Lambda subscription.
+This screenshot confirms that the Amazon SNS topic has an active Lambda subscription.
 
-- Topic: cpu-alarm-topic
-- Protocol: Lambda
-- Endpoint: remediation_function
-- Status: Confirmed
+Subscription Details:
 
-![SNS Subscription](screenshots/02-sns-Lambda-subscription.png)
+- Topic: **cpu-alarm-topic**
+- Protocol: **Lambda**
+- Endpoint: **remediation_function**
+- Status: **Confirmed**
+
+![](./screenshots/02-sns-lambda-subscription.png)
 
 ---
 
-# Step 3 — Simulate High CPU Usage
+# Step 3 — Generate High CPU Load
 
-Generate CPU load on the EC2 instance.
+Run the stress test script.
 
 ```bash
 ./cloudwatch/generate-load.sh
 ```
 
-The workload gradually increases CPU utilization until it exceeds the configured threshold.
+The script increases CPU utilization until it exceeds the configured alarm threshold.
 
-CloudWatch detects the sustained CPU usage, changes the alarm state from **OK** to **ALARM**, publishes an SNS notification, and invokes the remediation Lambda function.
+CloudWatch continuously evaluates the metric and changes the alarm state to **ALARM** after two consecutive evaluation periods.
+
+The alarm notification is automatically delivered to Amazon SNS, which invokes the remediation Lambda function.
 
 ---
 
 ## Screenshot 3 — CloudWatch Metrics
 
-The graph shows CPU utilization increasing from normal operating levels to above the configured 80% threshold.
+The CloudWatch Metrics graph shows CPU utilization gradually increasing beyond the configured 80% threshold.
 
-The alarm threshold is clearly exceeded, triggering the CloudWatch alarm.
+This validates that the monitoring configuration successfully detects sustained high CPU utilization.
 
-![CPU Graph](screenshots/03-cpu-utilization-graph.png)
+![](./screenshots/03-cpu-utilization-graph.png)
 
 ---
 
 ## Screenshot 4 — Alarm State Changed to ALARM
 
-This screenshot shows the CloudWatch Alarm after the threshold has been exceeded.
+This screenshot shows the CloudWatch Alarm after the configured threshold has been exceeded.
 
-The alarm state changes from **OK** to **ALARM**, confirming that CloudWatch detected the sustained CPU utilization breach.
+The alarm transitions from **OK** to **ALARM**, confirming successful monitoring and event detection.
 
-Recent alarm history is also displayed.
+The alarm history also records the exact time the state changed.
 
-![Alarm State](screenshots/04-alarm-state-alarm.png)
-
----
-
-# Step 4 — Automated Remediation
-
-Once the alarm enters the **ALARM** state:
-
-1. CloudWatch publishes an event to Amazon SNS.
-2. Amazon SNS invokes the Lambda function.
-3. Lambda reboots the EC2 instance.
-4. Execution metrics are recorded.
-5. CloudWatch Logs store the remediation event.
+![](./screenshots/04-alarm-state-alarm.png)
 
 ---
+
+# Step 4 — Automated Incident Remediation
+
+Once the alarm enters the **ALARM** state, the remediation workflow is triggered automatically.
+
+Workflow:
+
+1. CloudWatch Alarm enters ALARM state.
+2. Amazon SNS publishes the notification.
+3. AWS Lambda receives the event.
+4. Lambda reboots the EC2 instance.
+5. Lambda records the remediation activity in CloudWatch Logs.
 
 ## Screenshot 5 — Lambda Function Execution
 
-This screenshot displays the Lambda Monitor page after execution.
+This screenshot shows the successful execution of the AWS Lambda remediation function after receiving the CloudWatch Alarm notification through Amazon SNS.
 
-It includes:
+The Lambda monitor page displays:
 
-- Successful Invocation
+- Function Name: **remediation_function**
+- Runtime: **Python 3.12**
+- Invocation Status: **Success**
+- Recent Invocation
 - Execution Duration
-- Runtime: Python 3.12
-- Success Status
-- Recent Execution History
+- Memory Utilization
+- CloudWatch Logs Link
 
-![Lambda Execution](screenshots/05-lambda-execution.png)
+![](./screenshots/05-lambda-execution.png)
 
 ---
 
 # Step 5 — CloudWatch Logging
 
-Every automated remediation action performed by Lambda is recorded in CloudWatch Logs.
+Every automated remediation performed by AWS Lambda is recorded in Amazon CloudWatch Logs.
 
 Each log entry contains:
 
 - Timestamp
 - Alarm Name
-- Instance ID
+- EC2 Instance ID
 - Action Performed
 - Execution Status
+- Request ID
 
-This provides a complete audit trail for incident response.
+Maintaining these logs provides complete operational visibility and creates an audit trail for every automated incident response.
 
 ---
 
 ## Screenshot 6 — CloudWatch Remediation Logs
 
-This screenshot shows the CloudWatch log group:
+This screenshot displays the CloudWatch Log Group containing the remediation history generated by the Lambda function.
 
-**/incident-response/remediation-actions**
+The log entries include:
 
-Recent log entries include:
+- Alarm Name: **HighCPUAlarm**
+- EC2 Instance: **web-server-prod**
+- Instance ID: **i-0d8a7b4c9f1234567**
+- Action: **RebootInstances**
+- Status: **Success**
+- Timestamp of Remediation
 
-- Alarm: HighCPUAlarm
-- Instance: i-0d8a7b4c9f1234567
-- Action: RebootInstances
-- Status: Success
-- Timestamp
-
-![CloudWatch Logs](screenshots/06-cloudwatch-remediation-logs.png)
+![](./screenshots/06-cloudwatch-remediation-logs.png)
 
 ---
 
@@ -298,29 +310,29 @@ Recent log entries include:
 
 ## Amazon CloudWatch
 
-Continuously monitors EC2 CPU utilization and detects sustained threshold breaches.
+Continuously monitors EC2 CPU utilization and detects sustained threshold breaches before they impact application availability.
 
 ## Amazon SNS
 
-Provides reliable event delivery between CloudWatch and AWS Lambda.
+Acts as the event distribution service between CloudWatch Alarms and AWS Lambda, ensuring reliable notification delivery.
 
 ## AWS Lambda
 
-Automatically remediates infrastructure issues without manual intervention.
+Automatically performs infrastructure remediation without requiring manual intervention, reducing operational response time.
 
 ## CloudWatch Logs
 
-Maintains a centralized audit trail for every remediation event.
+Maintains a centralized audit trail for every automated remediation event, enabling monitoring, troubleshooting, and compliance reporting.
 
-### Benefits
+### Governance Benefits
 
+- Automated incident detection
 - Reduced Mean Time to Recovery (MTTR)
-- Automated infrastructure remediation
-- Event-driven automation
-- Improved operational reliability
+- Event-driven infrastructure remediation
 - Centralized operational logging
-- Repeatable self-healing workflow
+- Improved infrastructure reliability
 - Reduced manual intervention
+- Repeatable self-healing architecture
 
 ---
 
@@ -333,7 +345,7 @@ Maintains a centralized audit trail for every remediation event.
 - CloudWatch Logs
 - Amazon SNS
 - AWS Lambda
-- AWS IAM
+- AWS Identity and Access Management (IAM)
 - AWS CLI
 - Python 3.12
 
@@ -342,11 +354,11 @@ Maintains a centralized audit trail for every remediation event.
 # Project Deliverables
 
 - ✅ CloudWatch Alarm Configuration
-- ✅ Amazon SNS Topic
+- ✅ Amazon SNS Topic Configuration
 - ✅ Lambda Remediation Function
 - ✅ IAM Execution Role
-- ✅ Automated EC2 Recovery
-- ✅ CloudWatch Logging
+- ✅ Automated EC2 Recovery Workflow
+- ✅ CloudWatch Log Integration
 - ✅ Six AWS Console Screenshots
 - ✅ Complete Project Documentation
 
@@ -356,21 +368,17 @@ Maintains a centralized audit trail for every remediation event.
 
 | Screenshot | Description |
 |------------|-------------|
-| Screenshot 1 | CloudWatch Alarm Configuration |
-| Screenshot 2 | SNS Lambda Subscription |
-| Screenshot 3 | CPU Utilization Metrics |
-| Screenshot 4 | Alarm State Changed to ALARM |
-| Screenshot 5 | Lambda Function Execution |
-| Screenshot 6 | CloudWatch Remediation Logs |
+| 01 | CloudWatch Alarm Configured |
+| 02 | SNS to Lambda Subscription |
+| 03 | CloudWatch CPU Utilization Graph |
+| 04 | CloudWatch Alarm State (ALARM) |
+| 05 | Lambda Function Execution |
+| 06 | CloudWatch Remediation Logs |
 
 ---
 
 # Project Outcome
 
-Successfully implemented an automated incident response solution that continuously monitors Amazon EC2 CPU utilization, detects sustained threshold violations, publishes notifications through Amazon SNS, automatically invokes an AWS Lambda remediation function, reboots the affected EC2 instance, and records every remediation event in CloudWatch Logs.
+Successfully implemented an automated incident response system that continuously monitors Amazon EC2 CPU utilization using Amazon CloudWatch. When sustained high CPU utilization is detected, a CloudWatch Alarm publishes an event to Amazon SNS, which invokes an AWS Lambda function to automatically reboot the affected EC2 instance. Every remediation event is recorded in Amazon CloudWatch Logs, providing a complete audit trail for operational monitoring and governance.
 
-This project demonstrates practical implementation of cloud monitoring, serverless automation, event-driven architecture, and automated infrastructure remediation using native AWS services while providing a complete operational audit trail.
-````
-
-This version is cleaner, more professional, GitHub-ready, and follows AWS documentation style with consistent formatting and corrected screenshot references.
-# aws-automated-incident-response
+This project demonstrates practical implementation of AWS monitoring, serverless automation, event-driven architecture, and self-healing infrastructure using native AWS services to improve application availability and reduce operational effort.
